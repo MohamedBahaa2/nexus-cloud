@@ -2,4 +2,8 @@
 **/dist
 **/build
 .git
-.env
+**/.env
+**/.env.*
+coverage
+arch
+docs
