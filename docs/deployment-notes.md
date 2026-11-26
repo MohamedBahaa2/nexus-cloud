@@ -46,7 +46,8 @@ All variables are listed with local defaults in each service's `.env.example`. *
 | `KEYCLOAK_INTERNAL_URL`                              | all (optional)             | In-cluster Keycloak origin for keys and admin calls, e.g. `http://keycloak.identity.svc:8080`                |
 | `USER_SERVICE_URL`                                   | file-service, chat-service | e.g. `http://user-service.app.svc:3003`                                                                      |
 | `S3_BUCKET`, `AWS_REGION`                            | file-service               | On AWS leave `S3_ENDPOINT` and the `AWS_*_KEY` variables unset and use IRSA                                  |
-| `S3_ENDPOINT`, `S3_FORCE_PATH_STYLE`                 | file-service               | Only for S3-compatible storage; the endpoint must be reachable **by browsers** (presigned URLs)              |
+| `S3_ENDPOINT`, `S3_FORCE_PATH_STYLE`                 | file-service               | Only for S3-compatible storage; the endpoint file-service itself calls                                       |
+| `S3_PUBLIC_ENDPOINT`                                 | file-service (optional)    | Endpoint put into presigned URLs; must be reachable **by browsers**. Empty: `S3_ENDPOINT`                    |
 | `DATABASE_URL` (**secret**)                          | user-service, chat-service | Tables are created on first use                                                                              |
 | `REDIS_URL`                                          | chat-service               | Required for more than one chat-service replica                                                              |
 | `LIVEKIT_URL`                                        | chat-service               | Public `wss://` URL, returned to browsers                                                                    |

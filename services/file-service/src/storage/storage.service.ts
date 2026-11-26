@@ -24,7 +24,13 @@ export interface StoredObject {
  */
 @Injectable()
 export class StorageService implements OnModuleInit {
+  /** For this service's own calls to S3. */
   private readonly s3: S3Client;
+  /**
+   * Only signs URLs for browsers; it never sends a request. Same client as `s3`
+   * unless S3_PUBLIC_ENDPOINT is set.
+   */
+  private readonly presigner: S3Client;
   private readonly bucket: string;
   private readonly ttl: number;
 
@@ -34,16 +40,24 @@ export class StorageService implements OnModuleInit {
   ) {
     this.bucket = config.get('S3_BUCKET', { infer: true });
     this.ttl = config.get('PRESIGN_TTL_SECONDS', { infer: true });
-    this.s3 = new S3Client({
-      region: config.get('AWS_REGION', { infer: true }),
-      endpoint: config.get('S3_ENDPOINT', { infer: true }),
-      forcePathStyle: config.get('S3_FORCE_PATH_STYLE', { infer: true }),
-      // Since SDK v3.729 the default adds a CRC32 checksum to presigned PUT URLs,
-      // computed over an empty body at signing time, so the browser's real upload
-      // fails with BadDigest. Only send checksums when an operation requires them.
-      requestChecksumCalculation: 'WHEN_REQUIRED',
-      responseChecksumValidation: 'WHEN_REQUIRED',
-    });
+
+    const endpoint = config.get('S3_ENDPOINT', { infer: true });
+    const publicEndpoint = config.get('S3_PUBLIC_ENDPOINT', { infer: true });
+    const client = (url: string | undefined) =>
+      new S3Client({
+        region: config.get('AWS_REGION', { infer: true }),
+        endpoint: url,
+        forcePathStyle: config.get('S3_FORCE_PATH_STYLE', { infer: true }),
+        // Since SDK v3.729 the default adds a CRC32 checksum to presigned PUT URLs,
+        // computed over an empty body at signing time, so the browser's real upload
+        // fails with BadDigest. Only send checksums when an operation requires them.
+        requestChecksumCalculation: 'WHEN_REQUIRED',
+        responseChecksumValidation: 'WHEN_REQUIRED',
+      });
+
+    this.s3 = client(endpoint);
+    this.presigner =
+      publicEndpoint && publicEndpoint !== endpoint ? client(publicEndpoint) : this.s3;
   }
 
   onModuleInit() {
@@ -69,7 +83,7 @@ export class StorageService implements OnModuleInit {
 
   presignUpload(key: string, contentType: string): Promise<string> {
     return getSignedUrl(
-      this.s3,
+      this.presigner,
       new PutObjectCommand({ Bucket: this.bucket, Key: key, ContentType: contentType }),
       { expiresIn: this.ttl },
     );
@@ -77,7 +91,7 @@ export class StorageService implements OnModuleInit {
 
   presignDownload(key: string, downloadName: string): Promise<string> {
     return getSignedUrl(
-      this.s3,
+      this.presigner,
       new GetObjectCommand({
         Bucket: this.bucket,
         Key: key,

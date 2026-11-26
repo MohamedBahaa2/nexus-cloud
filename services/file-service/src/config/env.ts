@@ -23,7 +23,14 @@ export const envSchema = z.object({
   USER_SERVICE_URL: z.string().url().default('http://localhost:3003'),
   S3_BUCKET: z.string().min(1),
   AWS_REGION: z.string().default('eu-central-1'),
+  /** S3 endpoint for this service's own calls (list, delete, readiness). Empty: AWS S3. */
   S3_ENDPOINT: optionalUrl,
+  /**
+   * S3 endpoint put into presigned URLs, which browsers open. Only needed when the
+   * browser reaches S3 at a different address than this service (e.g. in Docker:
+   * http://localhost:9000 vs http://s3:8333). Empty: use S3_ENDPOINT.
+   */
+  S3_PUBLIC_ENDPOINT: optionalUrl,
   S3_FORCE_PATH_STYLE: bool,
   // Static keys for local S3 stand-ins only; leave unset on AWS (IRSA / Pod Identity).
   // They must be listed here: @nestjs/config only copies validated keys from .env

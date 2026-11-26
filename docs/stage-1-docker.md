@@ -94,17 +94,14 @@ Create a user-defined network (`docker network create nexusdrive`) and start eve
 
 Some addresses are used by **both the browser and the services**. The browser can't resolve container names, and the containers can't use the browser's `localhost`. The services split these addresses:
 
-| What         | Browser uses (public)                                                                        | Container uses (internal)                        |
-| ------------ | -------------------------------------------------------------------------------------------- | ------------------------------------------------ |
-| Keycloak     | `KEYCLOAK_ISSUER_URL=http://localhost:8080/realms/nexusdrive` (must match the token's `iss`) | `KEYCLOAK_INTERNAL_URL=http://keycloak:8080`     |
-| LiveKit      | `LIVEKIT_URL=ws://localhost:7880`                                                            | `LIVEKIT_API_URL=http://livekit:7880`            |
-| user-service | (not used)                                                                                   | `USER_SERVICE_URL=http://user-service:3003`      |
-| **S3**       | **presigned URLs from `S3_ENDPOINT`**                                                        | **also `S3_ENDPOINT` (list, delete, readiness)** |
+| What         | Browser uses (public)                                                                        | Container uses (internal)                    |
+| ------------ | -------------------------------------------------------------------------------------------- | -------------------------------------------- |
+| Keycloak     | `KEYCLOAK_ISSUER_URL=http://localhost:8080/realms/nexusdrive` (must match the token's `iss`) | `KEYCLOAK_INTERNAL_URL=http://keycloak:8080` |
+| LiveKit      | `LIVEKIT_URL=ws://localhost:7880`                                                            | `LIVEKIT_API_URL=http://livekit:7880`        |
+| user-service | (not used)                                                                                   | `USER_SERVICE_URL=http://user-service:3003`  |
+| S3           | `S3_PUBLIC_ENDPOINT=http://localhost:9000` (put into presigned URLs)                         | `S3_ENDPOINT=http://s3:8333`                 |
 
-> **Open issue: S3 has only one endpoint setting.** file-service uses `S3_ENDPOINT` both to sign browser URLs and for its own calls ([storage.service.ts](../services/file-service/src/storage/storage.service.ts)). `http://localhost:9000` works for the browser but not inside the container; `http://s3:8333` works inside the container but not in the browser. Options:
->
-> 1. **(Recommended)** Add an optional `S3_PUBLIC_ENDPOINT` to file-service and use it only for presigning, like `KEYCLOAK_INTERNAL_URL` and `LIVEKIT_API_URL` do. This is a small code change, and Compose and kind need it too. On AWS, real S3 is reachable from both sides, so it stays unset.
-> 2. Stage-1 workaround: name the S3 container `s3`, publish `8333:8333`, add `127.0.0.1 s3` to your machine's hosts file (on WSL, the **Windows** hosts file), and set `S3_ENDPOINT=http://s3:8333`.
+file-service signs browser URLs with `S3_PUBLIC_ENDPOINT` and makes its own calls (list, delete, readiness) to `S3_ENDPOINT` ([storage.service.ts](../services/file-service/src/storage/storage.service.ts)). Signing runs locally, so the container never has to reach the public address. On AWS, real S3 is reachable from both sides, so `S3_PUBLIC_ENDPOINT` stays unset.
 
 ## `deploy/docker-run/up.sh`
 
